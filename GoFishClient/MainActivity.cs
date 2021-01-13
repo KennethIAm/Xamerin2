@@ -37,9 +37,6 @@ namespace GoFishClient
 
         static string localPlayer = "Kenned";
 
-
-
-
         protected override void OnCreate(Bundle savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
@@ -99,8 +96,6 @@ namespace GoFishClient
                     items[i] = hand[i].FullName;
                 }
 
-
-
                 //create an adapter to describe how the items are displayed, adapters are used in several places in android.
                 //There are multiple variations of this, but this is the basic variant.
 
@@ -138,7 +133,6 @@ namespace GoFishClient
                     request = JsonConvert.DeserializeObject<GameRequest>(Encoding.UTF8.GetString(receiveBytes, 0, byteCount));
                 }
 
-
                 Console.WriteLine("RECEIVED REQUEST TYPE: " + request.RequestType);
 
                 GameRequest gameRequest;
@@ -146,8 +140,8 @@ namespace GoFishClient
                 {
                     // End game
                     case 0:
-                        gameEnded = true;
                         statusTextView.Text = "The game has ended!";
+                        AnswerPointRequest();
                         break;
                     // Answer on request
                     case 1:
@@ -195,7 +189,7 @@ namespace GoFishClient
 
                         setupSpinner();
                         break;
-                        // Give cards away
+                    // Give cards away
                     case 3:
                         gameRequest = (GameRequest)request;
 
@@ -209,7 +203,7 @@ namespace GoFishClient
                         RunOnUiThread(() =>
                         {
                             String[] players = new String[setupRequest.Players.Count - 1];
-                            int counter = 1;
+                            int counter = 0;
                             foreach (string player in setupRequest.Players)
                             {
                                 if (player != localPlayer)
@@ -224,10 +218,15 @@ namespace GoFishClient
                             playerSpinner.Adapter = adapter;
                         });
                         break;
+                    case 10:
+                        gameRequest = (GameRequest)request;
+                        receivedCardsTextView.Text = (gameRequest.UserFrom + " won with " + gameRequest.CardValue + " sets!");
+                        gameEnded = true;
+                        break;
                     default:
                         break;
                 }
-                
+
                 if (gameEnded == true)
                 {
                     break;
@@ -465,6 +464,20 @@ namespace GoFishClient
             gr.RequestType = 1;
             gr.UserFrom = localPlayer;
             gr.UserTo = playerSpinner.SelectedItem.ToString();
+            string s = JsonConvert.SerializeObject(gr, Formatting.Indented);
+            byte[] buffer = Encoding.UTF8.GetBytes(s);
+            buffer = Encoding.UTF8.GetBytes(s);
+            ns.Write(buffer, 0, buffer.Length);
+        }
+
+        void AnswerPointRequest()
+        {
+            NetworkStream ns = client.GetStream();
+            GameRequest gr = new GameRequest();
+
+            gr.RequestType = 10;
+            gr.UserFrom = localPlayer;
+            gr.CardValue = points;
             string s = JsonConvert.SerializeObject(gr, Formatting.Indented);
             byte[] buffer = Encoding.UTF8.GetBytes(s);
             buffer = Encoding.UTF8.GetBytes(s);
